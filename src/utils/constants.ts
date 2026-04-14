@@ -15,3 +15,4 @@ export const FAILED_MESSAGE: string = process.env.FAILED_MESSAGE || '=====> FAIL
 export const SUCCESS_MESSAGE: string = process.env.SUCCESS_MESSAGE || '=====> SUCCESS:';
 export const MAX_EC2_MESSAGE: string = process.env.MAX_EC2_MESSAGE || '===> MAX_EC2_INSTANCES_REACHED:';
 export const MONITOR_TABLE: string = process.env.MONITOR_TABLE || 'agents-monitor-win';
+export const WEBHOOK_SECRET: string = process.env.WEBHOOK_SECRET || '';

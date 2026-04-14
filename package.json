@@ -9,7 +9,11 @@
     "build": "tsc",
     "deploy:local": "serverless offline start",
     "package": "npx serverless package",
-    "test": "echo \"No Hay pruebas Unitarias\""
+    "test": "echo \"No Hay pruebas Unitarias\"",
+    "localstack:up": "docker-compose up -d && echo 'LocalStack iniciando... espera ~20s'",
+    "localstack:down": "docker-compose down",
+    "localstack:status": "curl -s http://localhost:4566/_localstack/health | node -e \"process.stdin.resume();let d='';process.stdin.on('data',c=>d+=c);process.stdin.on('end',()=>console.log(JSON.stringify(JSON.parse(d),null,2)))\"",
+    "localstack:dynamo:scan": "AWS_ACCESS_KEY_ID=test AWS_SECRET_ACCESS_KEY=test aws dynamodb scan --table-name agents-monitor-lnx-arm --endpoint-url http://localhost:4566 --region us-east-1"
   },
   "keywords": [],
   "author": "",
@@ -22,6 +26,7 @@
     "@types/aws-lambda": "8.10.136",
     "@types/node": "20.11.30",
     "serverless": "3.40.0",
+    "serverless-offline": "^14.5.0",
     "typescript": "5.4.3"
   }
 }

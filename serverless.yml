@@ -1,5 +1,8 @@
 service: agents-monitor-lnx-arm
 
+plugins:
+  - serverless-offline
+
 provider:
   name: aws
   runtime: nodejs20.x
@@ -60,6 +63,7 @@ provider:
     AGENT_NAME: '#{agentsname}#'
     MONITOR_TABLE: '#{monitorTable}#'
     LUNCH_TEMPLATE_NAME: '#{lunchTemplateName}#'
+    WEBHOOK_SECRET: '#{webhookSecret}#'
   stackTags:
     banistmo:application-code: "${param:applicationCode}"
     banistmo:application-cc: "${param:applicationCc}"
@@ -97,6 +101,15 @@ functions:
     timeout: 60
     events:
       - schedule: rate(60 minutes)
+
+  linuxWebhookTrigger:
+    handler: dist/handler.webhookTrigger
+    timeout: 60
+    events:
+      - http:
+          path: trigger
+          method: post
+          cors: false
 
 resources:
     Resources:
