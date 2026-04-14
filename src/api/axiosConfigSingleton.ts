@@ -1,5 +1,5 @@
-import { getAzureToken } from '../apis/secrects-manager';
-import { USER_OWNER } from './constants';
+import { getAzureToken } from './secrects-manager';
+import { USER_OWNER } from '../utils/constants';
 
 export class AxiosConfig {
     private static instance: AxiosConfig;

@@ -1,7 +1,7 @@
-import { AZURE_URL, POOL_ID , AGENT_NAME, DUMMY_AGENT_NAME,SUCCESS_MESSAGE} from '../util/constants'
+import { AZURE_URL, POOL_ID , AGENT_NAME, DUMMY_AGENT_NAME,SUCCESS_MESSAGE} from '../utils/constants'
 import axios from 'axios';
 import * as job from'./monitor';
-import { AxiosConfig } from  '../util/axiosConfigSingleton'
+import { AxiosConfig } from  './axiosConfigSingleton'
 
 const axiosInstance = AxiosConfig.getInstance()
 

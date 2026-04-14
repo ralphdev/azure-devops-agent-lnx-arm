@@ -1,5 +1,5 @@
-import { AxiosConfig } from  '../util/axiosConfigSingleton'
-import { AZURE_URL, POOL_ID, MAX_EC2_INSTANCES , DELETE_AGENT_INTERVAL, CLEANUP_EC2_INTERVAL, SUCCESS_MESSAGE, FAILED_MESSAGE, MAX_EC2_MESSAGE} from '../util/constants'
+import { AxiosConfig } from  './axiosConfigSingleton'
+import { AZURE_URL, POOL_ID, MAX_EC2_INSTANCES , DELETE_AGENT_INTERVAL, CLEANUP_EC2_INTERVAL, SUCCESS_MESSAGE, FAILED_MESSAGE, MAX_EC2_MESSAGE} from '../utils/constants'
 import * as AWS from './aws-ec2-agent'
 import * as azureAgent from './azure-agents';
 import axios from 'axios';

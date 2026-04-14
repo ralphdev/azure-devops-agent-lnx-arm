@@ -1,12 +1,13 @@
-import { SECRECT_ID } from '../util/constants'
+import { SECRECT_ID, REGION } from '../utils/constants'
 import { SecretsManager } from 'aws-sdk';
-import { REGION } from '../util/constants'
 
 export async function getAzureToken(){
+    const localEndpoint = process.env.AWS_ENDPOINT_URL;
     const secrectManageClient = new SecretsManager({
         region: REGION,
         maxRetries: 3,
-        retryDelayOptions: {base: 300}
+        retryDelayOptions: {base: 300},
+        ...(localEndpoint && { endpoint: localEndpoint })
     });
 
     let response = await secrectManageClient.getSecretValue({ SecretId: SECRECT_ID }).promise().catch(()=>{
