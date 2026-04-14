@@ -1,0 +1,145 @@
+Description: Plantilla de Lunch Template para EC2 Agentes
+
+Parameters:
+
+  imageId:
+    Description: Id de la AMI de Windows a Utilizar
+    Type: String
+
+  instanceProfileName:
+    Description: Rol que permite la ejecución del script con AWS CLI
+    Type: String
+
+  secrectName:
+    Description: Nombre del Secrecto
+    Type: String
+
+  instanceKey:
+    Description: Nombre de una EC2 KeyPair to para habiltiar acceso las instancias mediante llaves
+    Type: AWS::EC2::KeyPair::KeyName
+
+  instanceType:
+    Description: Tipo de Instancia EC2
+    Type: String
+
+Resources:
+
+  LinuxAgentArmLunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: 'linux-arm-agent-dynamic-lt'
+      LaunchTemplateData:
+        BlockDeviceMappings:
+          - DeviceName: '/dev/sda1'
+            Ebs:
+              DeleteOnTermination: true
+              Iops: 3500
+              Throughput: 400
+              VolumeSize: 100
+              VolumeType: 'gp3'
+        EbsOptimized: true
+        IamInstanceProfile:
+          Name: !Ref instanceProfileName #Nombre del IAM Instance Profile
+        ImageId: !Ref imageId #AMI ID
+        InstanceType: !Ref instanceType
+        KeyName: !Ref instanceKey
+        InstanceInitiatedShutdownBehavior: "terminate"
+        UserData:
+          Fn::Base64: !Sub |
+            #!/bin/bash
+            { # try
+                apt-get update
+
+                ## Common Packages
+                apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common unzip jq
+
+                ## AWS CLI
+                curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip"
+                unzip awscliv2.zip
+                ./aws/install
+
+                ## Docker
+                mkdir -p /etc/apt/keyrings
+                curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+                echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+                apt-get update
+                apt-get install -y docker-ce docker-ce-cli containerd.io
+                systemctl start docker
+                systemctl enable docker
+                usermod -a -G docker ubuntu
+
+                token=$(aws secretsmanager get-secret-value --secret-id "${secrectName}" --region us-east-1 --query 'SecretString' --output text | jq '.token' | xargs)
+
+                if [ -z "$token" -o "$token" == "null" ]; then
+                    echo 1>&2 "error: could not get Token"
+                    shutdown -h now
+                    exit 1
+                fi
+
+                mkdir -p /myagent
+                cd /myagent
+
+                ##Delete Agent Folder Content Except Tools
+                find . -mindepth 1 ! -regex '^./_work\(/.*\)?' -delete
+
+                AZP_AGENT_RESPONSE=$(curl -LsS \
+                --retry 3 \
+                -u user:$token \
+                -H 'Accept:application/json;api-version=3.0-preview' \
+                "https://dev.azure.com/banistmo/_apis/distributedtask/packages/agent?platform=linux-arm64")
+
+                AZP_AGENTPACKAGE_URL=$(echo "$AZP_AGENT_RESPONSE" \
+                | jq -r '.value | map([.version.major,.version.minor,.version.patch,.downloadUrl]) | sort | .[length-1] | .[3]')
+
+                if [ -z "$AZP_AGENTPACKAGE_URL" -o "$AZP_AGENTPACKAGE_URL" == "null" ]; then
+                    echo 1>&2 "error: could not determine a matching Azure Pipelines agent - check that account 'https://dev.azure.com/banistmo/' is correct and the token is valid for that account"
+                    shutdown -h now
+                    exit 1
+                fi
+
+                curl -LsS $AZP_AGENTPACKAGE_URL | tar -xz & wait $!
+                chown -R ubuntu:ubuntu /myagent
+
+                instanceId=$(curl --retry 3 --retry-delay 10 http://169.254.169.254/latest/meta-data/instance-id)
+
+                if [ -z "$instanceId" -o "$instanceId" == "null" ]; then
+                    echo 1>&2 "error: could not get instanceId"
+                    shutdown -h now
+                    exit 1
+                fi
+
+                echo $instanceId
+                echo $AZP_AGENTPACKAGE_URL
+
+                sudo -u ubuntu bash config.sh --unattended \
+                --agent "$instanceId" \
+                --url "https://dev.azure.com/banistmo" \
+                --auth PAT \
+                --token $token \
+                --pool "#{poolName}#" \
+                --work "_work" \
+                --replace \
+                --acceptTeeEula & wait $!
+
+                echo AGENT_ALLOW_RUNASROOT="1" >> /etc/environment
+                echo SHELL=/bin/bash >> /etc/environment
+                source /etc/environment
+                source /etc/profile
+
+                cat /etc/environment | awk '!/PATH=/' >> /myagent/.env
+                echo $PATH > /myagent/.path
+                bash svc.sh install root
+                bash svc.sh start
+            } || { # catch
+                shutdown -h now
+            }
+
+Outputs:
+
+  LinuxAgentArmLunchTemplate:
+    Value: !Ref LinuxAgentArmLunchTemplate
+
+  LinuxAgentArmLunchTemplateVersion:
+    Value: !GetAtt LinuxAgentArmLunchTemplate.LatestVersionNumber
+
+

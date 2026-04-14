@@ -1,0 +1,22 @@
+[
+    {
+      "ParameterKey": "imageId",
+      "ParameterValue": "$(agentsamiid)"
+    },
+    {
+      "ParameterKey": "instanceProfileName",
+      "ParameterValue": "$(instanceProfileName)"
+    },
+    {
+      "ParameterKey": "secrectName",
+      "ParameterValue": "$(secrectName)"
+    },
+    {
+      "ParameterKey": "instanceKey",
+      "ParameterValue": "awsuseast1-vstsagentskey"
+    },
+    {
+      "ParameterKey": "instanceType",
+      "ParameterValue": "a1.4xlarge"
+    }
+]

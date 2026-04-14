@@ -1,0 +1,27 @@
+{
+  "name": "windows-agents-monitor",
+  "version": "1.0.0",
+  "description": "Windows Agents Monitor",
+  "main": "handler.js",
+  "scripts": {
+    "start": "node ./dist/handler.js",
+    "dummy": "node ./dist/dummy.js",
+    "build": "tsc",
+    "deploy:local": "serverless offline start",
+    "package": "npx serverless package",
+    "test": "echo \"No Hay pruebas Unitarias\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "aws-sdk": "2.1582.0",
+    "axios": "1.12.0"
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "8.10.136",
+    "@types/node": "20.11.30",
+    "serverless": "3.40.0",
+    "typescript": "5.4.3"
+  }
+}

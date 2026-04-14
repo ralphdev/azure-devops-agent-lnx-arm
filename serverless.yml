@@ -1,0 +1,267 @@
+service: agents-monitor-lnx-arm
+
+provider:
+  name: aws
+  runtime: nodejs20.x
+  stage: ${opt:stage}
+  logRetentionInDays: 30
+  iamRoleStatements:
+    - Effect: "Allow"
+      Action:
+        - "dynamodb:GetItem"
+        - "dynamodb:PutItem"
+      Resource:
+        - "arn:aws:dynamodb:#{region}#:#{account}#:table/#{monitorTable}#"
+    - Effect: Allow
+      Action:
+        - "ec2:RunInstances"
+        - "ec2:TerminateInstances"
+        - "ec2:DescribeInstances"
+        - "ec2:DescribeLaunchTemplates"
+        - "ec2:DescribeSubnets"
+        - "ec2:DescribeSecurityGroups"
+        - "ec2:DescribeNetworkInterfaces"
+        - "ec2:CreateTags"
+        - "ec2:CreateVolume"
+        - "ec2:AttachVolume"
+        - "ec2:DeleteVolume"
+      Resource:
+        - "*"
+    - Effect: Allow
+      Action:
+        - "iam:PassRole"
+      Resource:
+        - "arn:aws:iam::#{account}#:role/#{agentsRoleName}#"
+    - Effect: Allow
+      Action:
+        - "secretsmanager:GetSecretValue"
+      Resource:
+        - "arn:aws:secretsmanager:#{region}#:#{account}#:secret:#{secrectName}#-??????"
+    - Effect: Allow
+      Action:
+        - "kms:Decrypt"
+      Resource:
+        - Fn::GetAtt:
+            - kmsKeyForCacheTable
+            - Arn
+  environment:
+    AGENTS_POOL: '#{poolName}#'
+    SECRECT_ID: '#{secrectName}#'
+    LOCAL_PROXY: 'false'
+    POOL_ID: '#{poolId}#'
+    MAX_EC2_INSTANCES: '#{maxec2instances}#'
+    DELETE_AGENT_INTERVAL: '#{deleteagentinterval}#'
+    CLEANUP_EC2_INTERVAL: '#{cleanupec2interval}#'
+    SUBNET_LIST_ID: '#{agentsSubnet}#'
+    SG_ID:
+      Fn::GetAtt:
+        - SecurityGroupEC2Agents
+        - GroupId
+    AGENT_NAME: '#{agentsname}#'
+    MONITOR_TABLE: '#{monitorTable}#'
+    LUNCH_TEMPLATE_NAME: '#{lunchTemplateName}#'
+  stackTags:
+    banistmo:application-code: "${param:applicationCode}"
+    banistmo:application-cc: "${param:applicationCc}"
+    banistmo:application-office: "${param:applicationOffice}"
+    banistmo:billing-mode: "${param:billingMode}"
+    banistmo:pmo-id: "${param:pmoId}"
+    banistmo:project-name: "${param:projectName}"
+    banistmo:project-cc: "${param:projectCc}"
+    banistmo:repository: "${param:repository}"
+    banistmo:tec:environment-type: "${param:tecEnvironmentType}"
+    banistmo:tec:state: "${param:tecState}"
+  deploymentBucket:
+    name: "bi-${opt:region}-deployment-${param:accountId}"
+  vpc:
+    securityGroupIds:
+      - Ref: SecurityGroupLambda
+    subnetIds:
+      !Split [',','#{Serverless.Subnets}#']
+
+functions:
+  linuxGenerateAgents:
+    handler: dist/handler.generateAgents
+    timeout: 60
+    events:
+      - schedule: rate(1 minute)
+
+  linuxTerminateAgents:
+    handler: dist/handler.terminateAgents
+    timeout: 60
+    events:
+      - schedule: rate(30 minutes)
+
+  linuxCleanUpAgents:
+    handler: dist/handler.cleanUpAgents
+    timeout: 60
+    events:
+      - schedule: rate(60 minutes)
+
+resources:
+    Resources:
+
+      agentsMonitorTable:
+        Type: AWS::DynamoDB::Table
+        Properties:
+          TableName: '#{monitorTable}#'
+          AttributeDefinitions:
+            - AttributeName: conditions
+              AttributeType: S
+          KeySchema:
+            - AttributeName: conditions
+              KeyType: HASH
+          BillingMode: PAY_PER_REQUEST
+          SSESpecification:
+            KMSMasterKeyId:
+              Fn::GetAtt: kmsKeyForCacheTable.Arn
+            SSEEnabled: true
+            SSEType: KMS
+
+      kmsKeyForCacheTable:
+        Type: AWS::KMS::Key
+        Properties:
+          Description: "Key to Encrypt Jobs Cache"
+          Enabled: true
+          EnableKeyRotation: true
+
+      SecurityGroupEC2Agents:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupName: SG-devops-lnx-arm-agents-lt
+          GroupDescription: Allow conection to client
+          VpcId: '#{vpcId}#'
+          SecurityGroupIngress:
+            #port 80
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 20.37.158.0/23
+              Description: 'AZ DevOps Inbound connections US Central'
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 52.150.138.0/24
+              Description: 'AZ DevOps Inbound connections US West'
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 20.42.5.0/24
+              Description: 'AZ DevOps Inbound connections US East'
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 20.41.6.0/23
+              Description: 'AZ DevOps Inbound connections US East 2'
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 40.80.187.0/24
+              Description: 'AZ DevOps Inbound connections US North'
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 40.119.10.0/24
+              Description: 'AZ DevOps Inbound connections US South'
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 40.82.252.0/24
+              Description: 'AZ DevOps Inbound connections US West'
+            - IpProtocol: tcp
+              FromPort: 80
+              ToPort: 80
+              CidrIp: 20.42.134.0/23
+              Description: 'AZ DevOps Inbound connections US West 2'
+            #port 443
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 20.37.158.0/23
+              Description: 'AZ DevOps Inbound connections US Central'
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 52.150.138.0/24
+              Description: 'AZ DevOps Inbound connections US West'
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 20.42.5.0/24
+              Description: 'AZ DevOps Inbound connections US East'
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 20.41.6.0/23
+              Description: 'AZ DevOps Inbound connections US East 2'
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 40.80.187.0/24
+              Description: 'AZ DevOps Inbound connections US North'
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 40.119.10.0/24
+              Description: 'AZ DevOps Inbound connections US South'
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 40.82.252.0/24
+              Description: 'AZ DevOps Inbound connections US West'
+            - IpProtocol: tcp
+              FromPort: 443
+              ToPort: 443
+              CidrIp: 20.42.134.0/23
+              Description: 'AZ DevOps Inbound connections US West 2'
+            #port 22
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 52.150.138.0/24
+              Description: 'AZ DevOps Inbound connections US West'
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 20.42.5.0/24
+              Description: 'AZ DevOps Inbound connections US East'
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 20.41.6.0/23
+              Description: 'AZ DevOps Inbound connections US East 2'
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 40.80.187.0/24
+              Description: 'AZ DevOps Inbound connections US North'
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 40.119.10.0/24
+              Description: 'AZ DevOps Inbound connections US South'
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 40.82.252.0/24
+              Description: 'AZ DevOps Inbound connections US West'
+            - IpProtocol: tcp
+              FromPort: 22
+              ToPort: 22
+              CidrIp: 20.42.134.0/23
+              Description: 'AZ DevOps Inbound connections US West 2'
+          SecurityGroupEgress:
+              - IpProtocol: tcp
+                FromPort: 0
+                ToPort: 65535
+                CidrIp: 0.0.0.0/0
+                Description: 'AZ DevOps Common output ports'
+
+      SecurityGroupLambda:
+        Type: AWS::EC2::SecurityGroup
+        Properties:
+          GroupDescription: Allow Lambda Connection
+          VpcId: '#{vpcLambda}#'
+
+
+

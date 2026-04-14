@@ -1,0 +1,17 @@
+export const AZURE_URL: string = 'https://dev.azure.com/banistmo';
+export const SECRECT_ID: string = process.env.SECRECT_ID || '';
+export const USER_OWNER: string = process.env.USER_OWNER || '';
+export const REGION: string = process.env.region || 'us-east-1';
+export const MAX_EC2_INSTANCES: number = (process.env.MAX_EC2_INSTANCES == undefined)?16:Number(process.env.MAX_EC2_INSTANCES);
+export const DELETE_AGENT_INTERVAL: number = (process.env.DELETE_AGENT_INTERVAL == undefined)?900:Number(process.env.DELETE_AGENT_INTERVAL);
+export const CLEANUP_EC2_INTERVAL: number = (process.env.CLEANUP_EC2_INTERVAL == undefined)?1200:Number(process.env.CLEANUP_EC2_INTERVAL);
+export const POOL_ID: string = process.env.POOL_ID || '';
+export const SG_ID: string = process.env.SG_ID || '';
+export const SUBNET_LIST_ID: string = process.env.SUBNET_LIST_ID || '';
+export const LUNCH_TEMPLATE_NAME: string = process.env.LUNCH_TEMPLATE_NAME || '';
+export const AGENT_NAME: string = process.env.AGENT_NAME || '';
+export const DUMMY_AGENT_NAME: string = process.env.DUMMY_AGENT_NAME || 'dummy';
+export const FAILED_MESSAGE: string = process.env.FAILED_MESSAGE || '=====> FAILED:';
+export const SUCCESS_MESSAGE: string = process.env.SUCCESS_MESSAGE || '=====> SUCCESS:';
+export const MAX_EC2_MESSAGE: string = process.env.MAX_EC2_MESSAGE || '===> MAX_EC2_INSTANCES_REACHED:';
+export const MONITOR_TABLE: string = process.env.MONITOR_TABLE || 'agents-monitor-win';
