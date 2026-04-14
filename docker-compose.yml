@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  localstack:
+    image: localstack/localstack:3.4
+    container_name: agents-monitor-localstack
+    ports:
+      - "4566:4566"
+    environment:
+      - SERVICES=ec2,dynamodb,secretsmanager
+      - DEFAULT_REGION=us-east-1
+      - DEBUG=0
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      - ./localstack-init:/etc/localstack/init/ready.d
+      - localstack-data:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:4566/_localstack/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+volumes:
+  localstack-data:

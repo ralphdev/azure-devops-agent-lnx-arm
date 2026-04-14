@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+.env.local
+
+.claude
+dist
+CLAUDE.md
+.mcp.json
+
+package-lock.json

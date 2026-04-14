@@ -2,8 +2,10 @@
 import * as AWS from 'aws-sdk';
 import { AttributeValue, GetItemInput, ListAttributeValue, PutItemInput, PutItemInputAttributeMap } from 'aws-sdk/clients/dynamodb';
 import { Instance, InstanceId, ReservationList, RunInstancesRequest } from 'aws-sdk/clients/ec2';
-import { MONITOR_TABLE,REGION, AGENT_NAME, SUCCESS_MESSAGE, LUNCH_TEMPLATE_NAME,SUBNET_LIST_ID, POOL_ID, SG_ID} from '../util/constants'
+import { MONITOR_TABLE,REGION, AGENT_NAME, SUCCESS_MESSAGE, LUNCH_TEMPLATE_NAME,SUBNET_LIST_ID, POOL_ID, SG_ID} from '../utils/constants'
 import * as azure from './azure-agents'
+
+const localEndpoint = process.env.AWS_ENDPOINT_URL;
 
 AWS.config.update({
     region: REGION,
@@ -11,8 +13,14 @@ AWS.config.update({
     retryDelayOptions: {base: 300}
 });
 
-export var ec2Client = new AWS.EC2({apiVersion: '2016-11-15'});
-export var dynamoDbClient = new AWS.DynamoDB();
+export var ec2Client = new AWS.EC2({
+    apiVersion: '2016-11-15',
+    ...(localEndpoint && { endpoint: localEndpoint })
+});
+
+export var dynamoDbClient = new AWS.DynamoDB({
+    ...(localEndpoint && { endpoint: localEndpoint })
+});
 
 export const createEC2Instance = async () => {
 
